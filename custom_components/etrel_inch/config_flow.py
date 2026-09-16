@@ -133,7 +133,9 @@ class EtrelOptionsFlow(OptionsFlow):
             self.entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL),
         )
         current_writes = self.entry.options.get(CONF_ENABLE_WRITES, False)
-        current_max_current = self.entry.options.get(CONF_MAX_CURRENT_A, self._default_max_current())
+        current_max_current = self.entry.options.get(
+            CONF_MAX_CURRENT_A, self._default_max_current()
+        )
 
         schema = vol.Schema(
             {
