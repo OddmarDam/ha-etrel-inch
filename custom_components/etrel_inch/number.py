@@ -19,6 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     CONF_ENABLE_WRITES,
+    CONF_MAX_CURRENT_A,
     CURRENT_SETPOINT_MAX_A,
     CURRENT_SETPOINT_MIN_A,
     CURRENT_SETPOINT_STEP_A,
@@ -75,14 +76,21 @@ class EtrelCurrentSetpointNumber(_EtrelNumberBase):
 
     def __init__(self, coordinator: EtrelCoordinator) -> None:
         super().__init__(coordinator, "current_setpoint")
-        # Clamp to the charger's own installer-configured site max (reg 1028)
-        # when it reports one, instead of always offering the full 32A the
-        # hardware is capable of — installations on a lower-rated fuse would
-        # otherwise let this slider request more current than is safe.
-        site_max = coordinator.device_info.custom_max_current_a
-        self._attr_native_max_value = (
-            min(CURRENT_SETPOINT_MAX_A, site_max) if site_max > 0 else CURRENT_SETPOINT_MAX_A
-        )
+        # Upper bound, in priority order: the user's explicit max_current_a
+        # option (set on the options card, pre-filled from the site max
+        # below) > the charger's own installer-configured site max (reg
+        # 1028) > the INCH's 32A hardware ceiling. Installations on a
+        # lower-rated fuse than the charger's hardware max would otherwise
+        # have no way to keep this slider (or an automation driving it) from
+        # requesting more current than the site can safely supply.
+        configured_max = coordinator.entry.options.get(CONF_MAX_CURRENT_A)
+        if configured_max is not None:
+            self._attr_native_max_value = min(float(configured_max), CURRENT_SETPOINT_MAX_A)
+        else:
+            site_max = coordinator.device_info.custom_max_current_a
+            self._attr_native_max_value = (
+                min(CURRENT_SETPOINT_MAX_A, site_max) if site_max > 0 else CURRENT_SETPOINT_MAX_A
+            )
         # Initial reflection: prefer target_current from the coordinator if non-zero.
         data = coordinator.data or {}
         target = data.get("target_current_a")

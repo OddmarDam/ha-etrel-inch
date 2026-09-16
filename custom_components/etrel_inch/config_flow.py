@@ -11,10 +11,13 @@ from homeassistant.core import callback
 from .const import (
     CONF_ENABLE_WRITES,
     CONF_HOST,
+    CONF_MAX_CURRENT_A,
     CONF_NAME,
     CONF_POLL_INTERVAL,
     CONF_PORT,
     CONF_SLAVE_ID,
+    CURRENT_SETPOINT_MAX_A,
+    CURRENT_SETPOINT_MIN_A,
     DEFAULT_NAME,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_PORT,
@@ -130,6 +133,7 @@ class EtrelOptionsFlow(OptionsFlow):
             self.entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL),
         )
         current_writes = self.entry.options.get(CONF_ENABLE_WRITES, False)
+        current_max_current = self.entry.options.get(CONF_MAX_CURRENT_A, self._default_max_current())
 
         schema = vol.Schema(
             {
@@ -137,6 +141,20 @@ class EtrelOptionsFlow(OptionsFlow):
                     int, vol.Range(min=MIN_POLL_INTERVAL, max=MAX_POLL_INTERVAL)
                 ),
                 vol.Required(CONF_ENABLE_WRITES, default=current_writes): bool,
+                vol.Required(CONF_MAX_CURRENT_A, default=current_max_current): vol.All(
+                    vol.Coerce(float),
+                    vol.Range(min=CURRENT_SETPOINT_MIN_A, max=CURRENT_SETPOINT_MAX_A),
+                ),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
+
+    def _default_max_current(self) -> float:
+        """Seed the max-current field from the charger's own reported site max.
+
+        Falls back to the hardware ceiling if the coordinator isn't up yet or
+        the charger hasn't reported a site max (reg 1028 left at 0).
+        """
+        coordinator = self.hass.data.get(DOMAIN, {}).get(self.entry.entry_id)
+        site_max = getattr(getattr(coordinator, "device_info", None), "custom_max_current_a", 0)
+        return site_max if site_max and site_max > 0 else CURRENT_SETPOINT_MAX_A

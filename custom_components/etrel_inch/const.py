@@ -19,6 +19,7 @@ CONF_SLAVE_ID: Final = "slave_id"
 CONF_NAME: Final = "name"
 CONF_POLL_INTERVAL: Final = "poll_interval"
 CONF_ENABLE_WRITES: Final = "enable_writes"
+CONF_MAX_CURRENT_A: Final = "max_current_a"
 
 # Defaults
 DEFAULT_PORT: Final = 502
@@ -115,7 +116,9 @@ CONNECTOR_TYPE_MAP: Final[dict[int, str]] = {
 }
 CONNECTOR_TYPE_OPTIONS: Final = [*CONNECTOR_TYPE_MAP.values(), "unknown"]
 
-# Bounds for the current-setpoint number entity
+# Bounds for the current-setpoint number entity. MAX is the INCH's hardware
+# ceiling — it also bounds the user-configurable CONF_MAX_CURRENT_A option,
+# which is what the entity actually uses as its live max (see number.py).
 CURRENT_SETPOINT_MIN_A: Final = 6.0
 CURRENT_SETPOINT_MAX_A: Final = 32.0
 CURRENT_SETPOINT_STEP_A: Final = 1.0

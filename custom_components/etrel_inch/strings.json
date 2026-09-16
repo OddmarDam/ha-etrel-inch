@@ -28,7 +28,11 @@
         "description": "Adjust how often the charger is polled. Enabling write controls adds the current/power setpoint sliders, pause switch, stop/release/restart buttons, and the departure-time entity.",
         "data": {
           "poll_interval": "Poll interval (seconds)",
-          "enable_writes": "Enable write controls"
+          "enable_writes": "Enable write controls",
+          "max_current_a": "Max current setpoint (A)"
+        },
+        "data_description": {
+          "max_current_a": "Upper bound for the current setpoint slider. Pre-filled from the charger's own installer-configured site max (or 32A if it hasn't reported one) — lower it to match your supply fuse if needed."
         }
       }
     }
