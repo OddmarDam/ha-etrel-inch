@@ -158,12 +158,20 @@ the entity registry if you need them.
 
 | Entity | Target reg | Range |
 |---|---:|---|
-| Current setpoint | `8` | 6-32 A (float32) |
+| Current setpoint | `8` | 6-32 A (float32), clamped to the site's configured max (reg `1028`) if lower |
 | Power setpoint *(disabled by default)* | `11` | 1.4-22 kW (float32) |
 
 Writing `0` to the current setpoint pauses charging. To **release** the
 override and let the charger return to its previous regime, press the
 *Release current setpoint* button (writes to reg `10`).
+
+The current setpoint's upper bound is the lesser of 32A and the charger's
+own installer-configured site max current (reg `1028`, also exposed as the
+diagnostic `custom_max_current` sensor). On an installation with a lower
+fuse rating than the charger's hardware max, this keeps the slider from
+ever requesting more current than the site can safely supply — no extra
+configuration needed, since it reads the same limit the charger enforces
+internally.
 
 ### Switch (write — gated)
 

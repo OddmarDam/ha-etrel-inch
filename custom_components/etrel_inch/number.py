@@ -71,11 +71,18 @@ class EtrelCurrentSetpointNumber(_EtrelNumberBase):
     _attr_translation_key = "current_setpoint"
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
     _attr_native_min_value = CURRENT_SETPOINT_MIN_A
-    _attr_native_max_value = CURRENT_SETPOINT_MAX_A
     _attr_native_step = CURRENT_SETPOINT_STEP_A
 
     def __init__(self, coordinator: EtrelCoordinator) -> None:
         super().__init__(coordinator, "current_setpoint")
+        # Clamp to the charger's own installer-configured site max (reg 1028)
+        # when it reports one, instead of always offering the full 32A the
+        # hardware is capable of — installations on a lower-rated fuse would
+        # otherwise let this slider request more current than is safe.
+        site_max = coordinator.device_info.custom_max_current_a
+        self._attr_native_max_value = (
+            min(CURRENT_SETPOINT_MAX_A, site_max) if site_max > 0 else CURRENT_SETPOINT_MAX_A
+        )
         # Initial reflection: prefer target_current from the coordinator if non-zero.
         data = coordinator.data or {}
         target = data.get("target_current_a")
@@ -83,7 +90,7 @@ class EtrelCurrentSetpointNumber(_EtrelNumberBase):
             self._last_value = float(target)
 
     async def async_set_native_value(self, value: float) -> None:
-        amps = max(CURRENT_SETPOINT_MIN_A, min(CURRENT_SETPOINT_MAX_A, float(value)))
+        amps = max(CURRENT_SETPOINT_MIN_A, min(self._attr_native_max_value, float(value)))
         try:
             await self.coordinator.client.write_current_setpoint(
                 address=REG_W_CURRENT_SETPOINT,
